@@ -1,0 +1,22 @@
+project_id = "ekqsmigaqgddqoqikipj"
+
+[functions.search-rentals]
+verify_jwt = false
+
+[functions.onemap]
+verify_jwt = false
+
+[functions.ura-transactions]
+verify_jwt = false
+
+[functions.hdb-resale]
+verify_jwt = false
+
+[functions.admin-prompts]
+verify_jwt = false
+
+[functions.refine-prompt]
+verify_jwt = false
+
+[functions.ura-rentals]
+verify_jwt = false

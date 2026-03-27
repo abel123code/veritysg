@@ -1,0 +1,1 @@
+ALTER TABLE public.room_hotspots ADD COLUMN tactics_label text NOT NULL DEFAULT '';

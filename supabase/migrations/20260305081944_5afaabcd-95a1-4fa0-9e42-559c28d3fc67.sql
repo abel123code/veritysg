@@ -1,0 +1,1 @@
+ALTER TABLE public.room_images ALTER COLUMN image_url SET DEFAULT '';
