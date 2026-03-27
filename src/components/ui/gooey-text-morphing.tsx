@@ -113,17 +113,17 @@ export function GooeyText({
 
       <div
         style={{ filter: `url(#${filterId})` }}
-        className="relative grid place-items-center"
+        className="relative grid place-items-center w-full"
       >
         <span
           ref={text1Ref}
-          className={cn("col-start-1 row-start-1 w-max", textClassName)}
+          className={cn("col-start-1 row-start-1 text-center whitespace-nowrap", textClassName)}
         >
           {texts[0]}
         </span>
         <span
           ref={text2Ref}
-          className={cn("col-start-1 row-start-1 w-max", textClassName)}
+          className={cn("col-start-1 row-start-1 text-center whitespace-nowrap", textClassName)}
         >
           {texts[1]}
         </span>

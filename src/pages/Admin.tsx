@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Save, RefreshCw, Plus, Trash2, Upload, Move, MousePointer, Eye, BookOpen, ArrowLeft, Settings, Smartphone, Monitor } from "lucide-react";
+import { Lock, Save, RefreshCw, Plus, Trash2, Upload, Move, MousePointer, Eye, BookOpen, ArrowLeft, Settings, Smartphone, Monitor, Image, Video } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -251,6 +251,8 @@ export default function Admin() {
   const [regulations, setRegulations] = useState<GuideRegulation[]>([]);
   const [glossary, setGlossary] = useState<GuideGlossary[]>([]);
   const [guideLoading, setGuideLoading] = useState(false);
+  const [heroSettings, setHeroSettings] = useState<{ background_image?: string; background_video?: string }>({});
+  const [heroSaving, setHeroSaving] = useState(false);
   const canvasRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -271,7 +273,7 @@ export default function Admin() {
       if (res.verified) {
         sessionStorage.setItem("admin_pw", password);
         setAuthenticated(true);
-        await Promise.all([loadHotspots(password), loadRoomImages(), loadGuideContent(password)]);
+        await Promise.all([loadHotspots(password), loadRoomImages(), loadGuideContent(password), loadHeroSettings()]);
       } else {
         toast({ title: "Invalid password", variant: "destructive" });
       }
@@ -291,6 +293,45 @@ export default function Admin() {
         setRoomImageData(map);
       }
     } catch { /* silent */ }
+  };
+
+  const loadHeroSettings = async () => {
+    try {
+      const res = await callAdmin({ action: "get_settings", password: storedPassword() });
+      if (res.success && res.data) {
+        const settings: Record<string, any> = {};
+        for (const row of res.data) settings[row.key] = row.value;
+        if (settings.hero_settings) {
+          setHeroSettings(settings.hero_settings);
+        }
+      }
+    } catch { /* silent */ }
+  };
+
+  const saveHeroSettings = async () => {
+    setHeroSaving(true);
+    try {
+      const res = await callAdmin({ action: "upsert_setting", password: storedPassword(), key: "hero_settings", value: heroSettings });
+      if (res.success) toast({ title: "Hero settings saved" });
+      else toast({ title: res.error || "Save failed", variant: "destructive" });
+    } catch { toast({ title: "Save failed", variant: "destructive" }); }
+    finally { setHeroSaving(false); }
+  };
+
+  const uploadHeroMedia = async (file: File, type: "image" | "video") => {
+    const ext = file.name.split(".").pop() || (type === "video" ? "mp4" : "jpg");
+    const path = `hero-${type}.${ext}`;
+    await supabase.storage.from("room-images").remove([path]);
+    const { error: uploadError } = await supabase.storage.from("room-images").upload(path, file, { upsert: true });
+    if (uploadError) { toast({ title: "Upload failed: " + uploadError.message, variant: "destructive" }); return; }
+    const { data: urlData } = supabase.storage.from("room-images").getPublicUrl(path);
+    const publicUrl = urlData.publicUrl + "?t=" + Date.now();
+    if (type === "video") {
+      setHeroSettings((prev) => ({ ...prev, background_video: publicUrl }));
+    } else {
+      setHeroSettings((prev) => ({ ...prev, background_image: publicUrl }));
+    }
+    toast({ title: `Hero ${type} uploaded` });
   };
 
   const uploadRoomImage = async (roomKey: string, file: File, isMobile = false) => {
@@ -458,6 +499,7 @@ export default function Admin() {
       loadHotspots(pw);
       loadRoomImages();
       loadGuideContent(pw);
+      loadHeroSettings();
     }
   }, []);
 
@@ -497,8 +539,109 @@ export default function Admin() {
             <TabsTrigger value="settings" className="text-sm px-5 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">Data Settings</TabsTrigger>
           </TabsList>
 
-          {/* Home Page Tab — Room Hotspots */}
+          {/* Home Page Tab — Hero Settings & Room Hotspots */}
           <TabsContent value="home" className="space-y-6 mt-6">
+            {/* Hero Settings Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Video className="h-5 w-5" /> Hero Section
+                </CardTitle>
+                <CardDescription>Configure the hero greeting section background image or looping video.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Image className="h-4 w-4" /> Background Image
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={heroSettings.background_image || ""}
+                        onChange={(e) => setHeroSettings((prev) => ({ ...prev, background_image: e.target.value }))}
+                        placeholder="Image URL or upload"
+                        className="flex-1"
+                      />
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) uploadHeroMedia(file, "image");
+                            e.target.value = "";
+                          }}
+                        />
+                        <Button variant="outline" size="icon">
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {heroSettings.background_image && (
+                      <div className="relative">
+                        <img src={heroSettings.background_image} alt="Hero preview" className="w-full h-32 object-cover rounded border" />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute top-2 right-2"
+                          onClick={() => setHeroSettings((prev) => ({ ...prev, background_image: undefined }))}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Video className="h-4 w-4" /> Background Video (loops)
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={heroSettings.background_video || ""}
+                        onChange={(e) => setHeroSettings((prev) => ({ ...prev, background_video: e.target.value }))}
+                        placeholder="Video URL or upload (MP4)"
+                        className="flex-1"
+                      />
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="video/mp4,video/webm"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) uploadHeroMedia(file, "video");
+                            e.target.value = "";
+                          }}
+                        />
+                        <Button variant="outline" size="icon">
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {heroSettings.background_video && (
+                      <div className="relative">
+                        <video src={heroSettings.background_video} className="w-full h-32 object-cover rounded border" muted loop />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute top-2 right-2"
+                          onClick={() => setHeroSettings((prev) => ({ ...prev, background_video: undefined }))}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Video takes priority over image if both are set. Leave both empty for solid background color.</p>
+                <Button onClick={saveHeroSettings} disabled={heroSaving}>
+                  <Save className="h-4 w-4 mr-2" /> {heroSaving ? "Saving..." : "Save Hero Settings"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Room Hotspots Section */}
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Room Hotspots</h2>

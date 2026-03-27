@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,46 +24,81 @@ interface RoomExperienceProps {
 
 export default function RoomExperience({ title, imageUrl, mobileImageUrl, hotspots }: RoomExperienceProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const active = hotspots.find((h) => h.id === activeId) ?? null;
-  const resolvedImage = isMobile && mobileImageUrl ? mobileImageUrl : imageUrl;
+  // Always use desktop image - mobile image feature disabled for now
+  // To re-enable: const resolvedImage = isMobile && mobileImageUrl ? mobileImageUrl : imageUrl;
+  const resolvedImage = imageUrl;
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setImageDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight,
+        });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener("resize", updateDimensions);
+    return () => window.removeEventListener("resize", updateDimensions);
+  }, [imageLoaded]);
 
   return (
-    <section className="relative min-h-screen flex flex-col md:flex-row bg-background">
-      {/* Image area */}
-      <div className="relative flex-1 min-h-[50vh] md:min-h-screen">
+    <section className="relative xl:min-h-screen flex flex-col xl:flex-row bg-background">
+      {/* Image area - use aspect ratio on mobile/tablet for proper proportions */}
+      <div 
+        ref={containerRef}
+        className="relative w-full aspect-[4/3] xl:aspect-auto xl:flex-1 xl:min-h-screen overflow-hidden"
+      >
         <img
           src={resolvedImage}
           alt={title}
           className="absolute inset-0 w-full h-full object-cover"
           loading="lazy"
+          onLoad={() => setImageLoaded(true)}
         />
         <div className="absolute inset-0 bg-foreground/20" />
-        <h2 className="absolute top-6 left-6 text-3xl md:text-4xl font-bold text-primary-foreground z-10 drop-shadow-lg">
+        <h2 className="absolute top-4 left-4 sm:top-5 sm:left-5 xl:top-6 xl:left-6 max-w-[calc(100%-2rem)] text-xl sm:text-2xl md:text-3xl xl:text-4xl font-bold leading-tight text-primary-foreground z-10 drop-shadow-lg">
           {title}
         </h2>
-        {hotspots.map((h) => (
-          <button
-            key={h.id}
-            onClick={() => setActiveId(activeId === h.id ? null : h.id)}
-            className="absolute z-10 group"
-            style={{ left: `${isMobile && h.mobile_x_percent != null ? h.mobile_x_percent : h.x_percent}%`, top: `${isMobile && h.mobile_y_percent != null ? h.mobile_y_percent : h.y_percent}%`, transform: "translate(-50%,-50%)" }}
-            aria-label={h.title}
-          >
-            <span
-              className={`block w-5 h-5 rounded-full border-2 border-primary-foreground transition-all ${
-                activeId === h.id
-                  ? "bg-primary-foreground scale-125"
-                  : "bg-primary-foreground/50 animate-pulse"
-              }`}
-            />
-          </button>
-        ))}
+        {/* Hotspot overlay - positioned relative to container */}
+        <div className="absolute inset-0 z-10">
+          {hotspots.map((h) => {
+            const xPos = isMobile && h.mobile_x_percent != null ? h.mobile_x_percent : h.x_percent;
+            const yPos = isMobile && h.mobile_y_percent != null ? h.mobile_y_percent : h.y_percent;
+            return (
+              <button
+                key={h.id}
+                onClick={() => setActiveId(activeId === h.id ? null : h.id)}
+                className="absolute group transition-transform duration-200"
+                style={{ 
+                  left: `${xPos}%`, 
+                  top: `${yPos}%`, 
+                  transform: "translate(-50%,-50%)" 
+                }}
+                aria-label={h.title}
+              >
+                <span
+                  className={`block w-4 h-4 sm:w-5 sm:h-5 xl:w-6 xl:h-6 rounded-full border-2 border-primary-foreground transition-all shadow-lg ${
+                    activeId === h.id
+                      ? "bg-primary-foreground scale-125"
+                      : "bg-primary-foreground/50 animate-pulse hover:scale-110"
+                  }`}
+                />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Sidebar */}
-      <div className="bg-card border-l border-border flex flex-col justify-center p-8 w-full md:w-96">
+      <div className="bg-card border-t xl:border-t-0 xl:border-l border-border flex flex-col xl:justify-center p-6 xl:p-8 w-full xl:w-96">
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
           What to know
         </p>
