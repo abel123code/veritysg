@@ -66,11 +66,13 @@ export interface ResolvedLocation {
 export async function resolveLocation(
   query: string,
   selection?: LocationSelection | null,
+  rawLat?: number,
+  rawLng?: number,
 ): Promise<ResolvedLocation> {
   const result: ResolvedLocation = {
     searchText: selection?.searchText || query.trim(),
-    lat: selection?.lat,
-    lng: selection?.lng,
+    lat: selection?.lat ?? rawLat,
+    lng: selection?.lng ?? rawLng,
     blkNo: selection?.blkNo,
     streetName: selection?.roadName?.toUpperCase(),
     building: selection?.building?.toUpperCase(),
@@ -96,7 +98,7 @@ export async function resolveLocation(
     }
   }
 
-  // If no autocomplete selection, try to resolve via OneMap search
+  // If no autocomplete selection, resolve structured fields via OneMap search
   if (!selection) {
     try {
       const { data: geoData } = await supabase.functions.invoke("onemap", {
@@ -108,16 +110,21 @@ export async function resolveLocation(
         if (r.ROAD_NAME && r.ROAD_NAME !== "NIL") result.streetName = r.ROAD_NAME.toUpperCase();
         if (r.BUILDING && r.BUILDING !== "NIL") result.building = r.BUILDING.toUpperCase();
 
-        const lat = parseFloat(r.LATITUDE);
-        const lng = parseFloat(r.LONGITUDE);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          result.lat = lat;
-          result.lng = lng;
+        // Only use OneMap coordinates if we don't already have raw coords (from map pin)
+        if (result.lat == null || result.lng == null) {
+          const lat = parseFloat(r.LATITUDE);
+          const lng = parseFloat(r.LONGITUDE);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            result.lat = lat;
+            result.lng = lng;
+          }
+        }
 
-          // Resolve planning area
+        // Resolve planning area if not already done
+        if (!result.town && result.lat != null && result.lng != null) {
           try {
             const { data: paData } = await supabase.functions.invoke("onemap", {
-              body: { action: "getPlanningArea", lat, lng },
+              body: { action: "getPlanningArea", lat: result.lat, lng: result.lng },
             });
             if (paData?.success && paData.data?.planningArea) {
               result.town = paData.data.planningArea.toUpperCase();
@@ -150,7 +157,7 @@ export async function resolveLocation(
 
 /**
  * Build the request body for HDB resale edge function.
- * Uses text-based town/street filters — NOT lat/lng.
+ * Includes lat/lng when available so the function can skip broad fallbacks.
  */
 export function buildHdbResaleBody(resolved: ResolvedLocation): Record<string, unknown> {
   const body: Record<string, unknown> = {
@@ -159,12 +166,16 @@ export function buildHdbResaleBody(resolved: ResolvedLocation): Record<string, u
   if (resolved.blkNo) body.block = resolved.blkNo;
   if (resolved.streetName) body.street = resolved.streetName;
   if (resolved.town) body.town = resolved.town;
+  if (resolved.lat != null && resolved.lng != null) {
+    body.lat = resolved.lat;
+    body.lng = resolved.lng;
+  }
   return body;
 }
 
 /**
  * Build the request body for HDB rental (search-rentals) edge function.
- * Uses text-based town/street filters — NOT lat/lng.
+ * Includes lat/lng when available so the function can skip broad fallbacks.
  */
 export function buildHdbRentalBody(resolved: ResolvedLocation): Record<string, unknown> {
   const body: Record<string, unknown> = {
@@ -173,6 +184,10 @@ export function buildHdbRentalBody(resolved: ResolvedLocation): Record<string, u
   if (resolved.town) body.town = resolved.town;
   if (resolved.streetName) body.street = resolved.streetName;
   if (resolved.blkNo) body.block = resolved.blkNo;
+  if (resolved.lat != null && resolved.lng != null) {
+    body.lat = resolved.lat;
+    body.lng = resolved.lng;
+  }
   return body;
 }
 

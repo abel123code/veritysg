@@ -117,7 +117,8 @@ function distanceSvy21(x1: number, y1: number, x2: number, y2: number): number {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-const PROXIMITY_RADIUS = 400; // 400m radius (~5 min walk)
+const PROXIMITY_RADIUS = 1000; // 1km radius for pin-drop proximity search
+const MAX_TEXT_MATCH_DISTANCE = 2000; // metres — cap text matches when coords are available
 
 /** Parse URA leaseDate like "0125" (mmyy) to "2025-01" */
 function parseLeaseDate(mmyy: string): string {
@@ -208,8 +209,8 @@ Deno.serve(async (req) => {
 
       // Check text match first (higher priority)
       if (query && (projLower.includes(query) || streetLower.includes(query))) {
-        include = true;
         isTextMatch = true;
+        include = true;
       }
 
       // Calculate distance if coordinates available
@@ -222,6 +223,11 @@ Deno.serve(async (req) => {
             include = true;
           }
         }
+      }
+
+      // When coords are available, filter out text matches that are too far away
+      if (include && isTextMatch && searchSvy && distance > MAX_TEXT_MATCH_DISTANCE) {
+        include = false;
       }
 
       if (include) {

@@ -1011,6 +1011,8 @@ function JustLookingSection() {
   const [searchLabel, setSearchLabel] = useState("");
   const [rentalPage, setRentalPage] = useState(1);
   const [buyPage, setBuyPage] = useState(1);
+  const [rentalFilter, setRentalFilter] = useState("");
+  const [buyFilter, setBuyFilter] = useState("");
 
   const doRentalSearch = async (location: string, lat?: number, lng?: number) => {
     setIsLoading(true);
@@ -1022,7 +1024,7 @@ function JustLookingSection() {
 
     const errs: string[] = [];
     const merged: UnifiedRental[] = [];
-    const resolved = await resolveLocation(location);
+    const resolved = await resolveLocation(location, null, lat, lng);
     const promises: Promise<void>[] = [];
 
     promises.push(
@@ -1049,6 +1051,7 @@ function JustLookingSection() {
     merged.sort((a, b) => b.date.localeCompare(a.date));
     setRentalResults(merged);
     setRentalPage(1);
+    setRentalFilter("");
     setErrors(errs);
     setIsLoading(false);
   };
@@ -1062,7 +1065,7 @@ function JustLookingSection() {
     setSearchLabel(location);
 
     const errs: string[] = [];
-    const resolved = await resolveLocation(location);
+    const resolved = await resolveLocation(location, null, lat, lng);
 
     const [uraRes, hdbRes] = await Promise.allSettled([
       supabase.functions.invoke("ura-transactions", { body: buildUraTransactionsBody(resolved) }),
@@ -1088,6 +1091,7 @@ function JustLookingSection() {
     );
     setBuyResults(merged);
     setBuyPage(1);
+    setBuyFilter("");
     setErrors(errs);
     setIsLoading(false);
   };
@@ -1163,13 +1167,34 @@ function JustLookingSection() {
 
       {/* Rental results table */}
       {!isLoading && mode === "renting" && rentalResults.length > 0 && (() => {
-        const totalPages = Math.ceil(rentalResults.length / PAGE_SIZE);
-        const paged = rentalResults.slice((rentalPage - 1) * PAGE_SIZE, rentalPage * PAGE_SIZE);
+        const q = rentalFilter.toLowerCase();
+        const filtered = q
+          ? rentalResults.filter((r) =>
+              r.address.toLowerCase().includes(q) ||
+              r.propertyType.toLowerCase().includes(q) ||
+              r.rooms.toLowerCase().includes(q) ||
+              r.source.toLowerCase().includes(q) ||
+              r.date.includes(q) ||
+              String(r.rent).includes(q)
+            )
+          : rentalResults;
+        const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+        const paged = filtered.slice((rentalPage - 1) * PAGE_SIZE, rentalPage * PAGE_SIZE);
         return (
           <div>
-            <p className="mb-2 text-xs text-muted-foreground">
-              {rentalResults.length} rental transaction{rentalResults.length !== 1 ? "s" : ""} found
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground">
+                {filtered.length === rentalResults.length
+                  ? `${rentalResults.length} rental transaction${rentalResults.length !== 1 ? "s" : ""} found`
+                  : `${filtered.length} of ${rentalResults.length} transactions match filter`}
+              </p>
+              <Input
+                placeholder="Filter results…"
+                value={rentalFilter}
+                onChange={(e) => { setRentalFilter(e.target.value); setRentalPage(1); }}
+                className="w-48 h-8 text-xs"
+              />
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1217,13 +1242,35 @@ function JustLookingSection() {
 
       {/* Buy results table */}
       {!isLoading && mode === "buying" && buyResults.length > 0 && (() => {
-        const totalPages = Math.ceil(buyResults.length / PAGE_SIZE);
-        const paged = buyResults.slice((buyPage - 1) * PAGE_SIZE, buyPage * PAGE_SIZE);
+        const q = buyFilter.toLowerCase();
+        const filtered = q
+          ? buyResults.filter((t) =>
+              t.project.toLowerCase().includes(q) ||
+              t.street.toLowerCase().includes(q) ||
+              t.propertyType.toLowerCase().includes(q) ||
+              (t.source || "").toLowerCase().includes(q) ||
+              t.contractDate.includes(q) ||
+              String(t.price).includes(q) ||
+              String(t.areaSqft).includes(q)
+            )
+          : buyResults;
+        const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+        const paged = filtered.slice((buyPage - 1) * PAGE_SIZE, buyPage * PAGE_SIZE);
         return (
           <div>
-            <p className="mb-2 text-xs text-muted-foreground">
-              {buyResults.length} transaction{buyResults.length !== 1 ? "s" : ""} found
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground">
+                {filtered.length === buyResults.length
+                  ? `${buyResults.length} transaction${buyResults.length !== 1 ? "s" : ""} found`
+                  : `${filtered.length} of ${buyResults.length} transactions match filter`}
+              </p>
+              <Input
+                placeholder="Filter results…"
+                value={buyFilter}
+                onChange={(e) => { setBuyFilter(e.target.value); setBuyPage(1); }}
+                className="w-48 h-8 text-xs"
+              />
+            </div>
             <TransactionTable data={paged} />
             <TablePagination page={buyPage} totalPages={totalPages} total={buyResults.length} onPageChange={setBuyPage} />
           </div>

@@ -137,7 +137,8 @@ function parseContractDate(mmyy: string): string {
   return `${year}-${mm}`;
 }
 
-const PROXIMITY_RADIUS = 800; // metres
+const PROXIMITY_RADIUS = 1000; // metres for pin-drop proximity search
+const MAX_TEXT_MATCH_DISTANCE = 2000; // metres — cap text matches when coords are available
 
 // Returns the cutoff date string "YYYY-MM" for 1 year ago
 function getCutoffDate(): string {
@@ -222,27 +223,37 @@ serve(async (req) => {
     if (exactMatched.length > 0) {
       matched = exactMatched;
     } else {
-      // Phase 2: Fallback to text (project/street contains) + proximity search
+      // Phase 2: Text (project/street contains) + proximity search
+      // When coordinates are available, enforce a distance cap on text matches
       for (const p of allProjects) {
         const projLower = (p.project || "").toLowerCase();
         const streetLower = (p.street || "").toLowerCase();
         let include = false;
+        let isTextMatch = false;
 
         // Partial text match on project or street
         if (query && (projLower.includes(query) || streetLower.includes(query))) {
+          isTextMatch = true;
           include = true;
         }
 
-        // Proximity match
-        if (!include && searchSvy && p.x && p.y) {
+        // Calculate distance when coordinates available
+        let dist = Infinity;
+        if (searchSvy && p.x && p.y) {
           const px = parseFloat(p.x);
           const py = parseFloat(p.y);
           if (!isNaN(px) && !isNaN(py) && px > 0 && py > 0) {
-            const dist = distanceSvy21(px, py, searchSvy.E, searchSvy.N);
-            if (dist <= PROXIMITY_RADIUS) {
+            dist = distanceSvy21(px, py, searchSvy.E, searchSvy.N);
+            // Include nearby projects even without text match
+            if (!include && dist <= PROXIMITY_RADIUS) {
               include = true;
             }
           }
+        }
+
+        // When coords are available, filter out text matches that are too far away
+        if (include && isTextMatch && searchSvy && dist > MAX_TEXT_MATCH_DISTANCE) {
+          include = false;
         }
 
         if (include) {

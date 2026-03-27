@@ -139,7 +139,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { location, town, street, block } = body;
+    const { location, town, street, block, lat, lng } = body;
+    const hasCoords = typeof lat === "number" && typeof lng === "number";
     if (!location && !town && !street) {
       return new Response(
         JSON.stringify({ success: false, error: 'Location is required' }),
@@ -198,15 +199,15 @@ Deno.serve(async (req) => {
       records = await fetchRecords({ street_name: rawQuery });
     }
 
-    // Strategy 6: raw query as town
-    if (records.length === 0 && rawQuery) {
+    // Strategy 6: raw query as town — skip when coordinates provided (too broad)
+    if (records.length === 0 && rawQuery && !hasCoords) {
       await sleep(INTER_REQUEST_DELAY);
       strategy = 'raw-town';
       records = await fetchRecords({ town: rawQuery });
     }
 
-    // Strategy 7: full-text search as last resort
-    if (records.length === 0 && rawQuery) {
+    // Strategy 7: full-text search as last resort — skip when coordinates provided (returns random results)
+    if (records.length === 0 && rawQuery && !hasCoords) {
       await sleep(INTER_REQUEST_DELAY);
       strategy = 'fulltext';
       records = await fetchByFullText(rawQuery);

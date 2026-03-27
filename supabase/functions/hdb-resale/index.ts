@@ -172,7 +172,8 @@ serve(async (req) => {
       });
     }
 
-    const { query, block, street, town } = body;
+    const { query, block, street, town, lat, lng } = body;
+    const hasCoords = typeof lat === "number" && typeof lng === "number";
 
     const rawQuery = normalizeStreet((query || "").trim().toUpperCase().replace(/@/g, ""));
     // Filter out "NIL" which OneMap returns for missing fields
@@ -227,14 +228,14 @@ serve(async (req) => {
       records = await fetchRecords({ street_name: rawQuery });
     }
 
-    // Strategy 5: raw query as town
-    if (records.length === 0 && rawQuery) {
+    // Strategy 5: raw query as town — skip when coordinates provided (too broad)
+    if (records.length === 0 && rawQuery && !hasCoords) {
       await sleep(INTER_REQUEST_DELAY);
       records = await fetchRecords({ town: rawQuery });
     }
 
-    // Strategy 6: full-text search as last resort
-    if (records.length === 0 && rawQuery) {
+    // Strategy 6: full-text search as last resort — skip when coordinates provided (returns random results)
+    if (records.length === 0 && rawQuery && !hasCoords) {
       await sleep(INTER_REQUEST_DELAY);
       records = await fetchByFullText(rawQuery);
     }
