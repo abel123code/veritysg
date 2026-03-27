@@ -114,14 +114,14 @@ export default function Guide() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Hero */}
       <header className="pt-24 pb-16 px-6 text-center">
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-4xl md:text-5xl font-bold tracking-tight"
+          className="text-4xl md:text-5xl font-bold tracking-tight text-foreground"
         >
           The Buyer's Guide
         </motion.h1>
@@ -129,7 +129,7 @@ export default function Guide() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.15 }}
-          className="mt-4 text-neutral-500 max-w-lg mx-auto text-sm md:text-base leading-relaxed"
+          className="mt-4 text-muted-foreground max-w-lg mx-auto text-sm md:text-base leading-relaxed"
         >
           Understand the psychology behind the deal — and the regulations that protect you.
         </motion.p>
@@ -137,15 +137,15 @@ export default function Guide() {
 
       <div className="max-w-2xl mx-auto px-6 pb-24">
         {/* ── Phase Tabs ── */}
-        <nav className="flex items-center justify-center gap-1 rounded-full bg-neutral-900 border border-neutral-800 p-1 mb-10">
+        <nav className="flex flex-wrap items-center justify-center gap-1 rounded-full border border-border bg-muted/60 p-1 mb-10">
           {phases.map((phase, i) => (
             <button
               key={phase.key}
               onClick={() => setActivePhase(i)}
               className={`relative rounded-full px-5 py-1.5 text-xs font-medium tracking-wide transition-all ${
                 activePhase === i
-                  ? "bg-neutral-100 text-neutral-900 shadow-sm"
-                  : "text-neutral-500 hover:text-neutral-300"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {phase.label}
@@ -162,16 +162,16 @@ export default function Guide() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            <h2 className="text-xs uppercase tracking-widest text-neutral-600 mb-4">
+            <h2 className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
               Psychological Tactics — {phases[activePhase]?.label}
             </h2>
             <Accordion type="single" collapsible className="w-full">
               {phases[activePhase]?.items.map((item, i) => (
-                <AccordionItem key={i} value={`t-${i}`} className="border-neutral-800">
-                  <AccordionTrigger className="text-left text-sm text-neutral-300 hover:text-neutral-100 py-4 [&[data-state=open]>svg]:text-neutral-400">
+                <AccordionItem key={i} value={`t-${i}`} className="border-border">
+                  <AccordionTrigger className="text-left text-sm text-foreground hover:no-underline py-4 [&[data-state=open]>svg]:text-muted-foreground">
                     {item.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-neutral-500 text-sm leading-relaxed pb-4">
+                  <AccordionContent className="text-muted-foreground text-sm leading-relaxed pb-4">
                     {item.a}
                   </AccordionContent>
                 </AccordionItem>
@@ -181,37 +181,37 @@ export default function Guide() {
         </AnimatePresence>
 
         {/* ── Divider ── */}
-        <div className="my-16 h-px bg-neutral-800" />
+        <div className="my-16 h-px bg-border" />
 
         {/* ── Regulations ── */}
-        <h2 className="text-xs uppercase tracking-widest text-neutral-600 mb-6">
+        <h2 className="text-xs uppercase tracking-widest text-muted-foreground mb-6">
           Regulations & Duties
         </h2>
         <Accordion type="multiple" className="w-full">
           {regulations.map((reg, i) => (
-            <AccordionItem key={i} value={`r-${i}`} className="border-neutral-800">
-              <AccordionTrigger className="text-left text-sm text-neutral-300 hover:text-neutral-100 py-4 [&[data-state=open]>svg]:text-neutral-400">
+            <AccordionItem key={i} value={`r-${i}`} className="border-border">
+              <AccordionTrigger className="text-left text-sm text-foreground hover:no-underline py-4 [&[data-state=open]>svg]:text-muted-foreground">
                 {reg.title}
               </AccordionTrigger>
               <AccordionContent className="pb-4">
-                <p className="text-sm text-neutral-400 whitespace-pre-line leading-relaxed">{reg.content}</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">{reg.content}</p>
               </AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
 
         {/* ── Divider ── */}
-        <div className="my-16 h-px bg-neutral-800" />
+        <div className="my-16 h-px bg-border" />
 
         {/* ── Glossary ── */}
-        <h2 className="text-xs uppercase tracking-widest text-neutral-600 mb-6">
+        <h2 className="text-xs uppercase tracking-widest text-muted-foreground mb-6">
           Glossary
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {glossaryItems.map(([term, def]) => (
-            <div key={term} className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-              <dt className="text-sm font-semibold text-neutral-200 mb-1">{term}</dt>
-              <dd className="text-xs text-neutral-500 leading-relaxed">{def}</dd>
+            <div key={term} className="rounded-lg border border-border bg-card p-4">
+              <dt className="text-sm font-semibold text-card-foreground mb-1">{term}</dt>
+              <dd className="text-xs text-muted-foreground leading-relaxed">{def}</dd>
             </div>
           ))}
         </div>

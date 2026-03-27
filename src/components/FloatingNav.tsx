@@ -40,10 +40,11 @@ export default function FloatingNav() {
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
           className="pointer-events-auto flex w-max max-w-[calc(100vw-1.5rem)] items-center gap-1 rounded-full border border-neutral-300/60 bg-gradient-to-b from-neutral-100/90 to-neutral-200/80 px-1.5 py-1 shadow-[0_2px_12px_rgba(0,0,0,0.08)] backdrop-blur-md"
         >
-          {/* Logo */}
+          {/* Logo — same visual weight as inactive tabs; only Tool/Guide show selected (dark) */}
           <button
+            type="button"
             onClick={() => navigate("/")}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800 text-neutral-100 text-[11px] font-semibold tracking-tight select-none transition-colors hover:bg-neutral-700"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tracking-tight text-neutral-600 transition-colors select-none hover:bg-neutral-300/40 hover:text-neutral-900"
           >
             v.
           </button>
