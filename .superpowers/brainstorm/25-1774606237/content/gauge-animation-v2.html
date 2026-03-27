@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deal Gauge — Animation Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f8f9fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  .container { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; padding: 40px 20px; }
+  .gauge-card {
+    background: #fff; border-radius: 16px; padding: 32px 40px 28px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+    text-align: center; width: 280px; cursor: pointer; border: 2px solid transparent;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .gauge-card:hover { border-color: #e2e8f0; }
+  .gauge-card.selected { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15), 0 4px 12px rgba(0,0,0,0.06); }
+  .gauge-svg { display: block; margin: 0 auto; }
+  .deal-label { font-size: 20px; font-weight: 700; margin-top: 8px; }
+  .deal-sub { font-size: 13px; color: #888; margin-top: 4px; }
+  .tier-labels { display: flex; justify-content: space-between; width: 180px; margin: 2px auto 0; font-size: 11px; color: #aaa; font-weight: 500; }
+  .replay-btn { margin-top: 16px; font-size: 12px; color: #3b82f6; cursor: pointer; background: none; border: none; font-weight: 500; }
+  .replay-btn:hover { text-decoration: underline; }
+  h2 { text-align: center; width: 100%; font-size: 22px; font-weight: 600; color: #222; margin-bottom: 4px; }
+  .page-sub { text-align: center; width: 100%; font-size: 14px; color: #888; margin-bottom: 24px; }
+
+  .needle {
+    transform-origin: 100px 95px;
+    transition: none;
+  }
+  .needle.animate {
+    transition: transform 1.2s cubic-bezier(0.34, 1.4, 0.64, 1);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Needle Animation — Three Fixed States</h2>
+  <p class="page-sub">Click any card or hit Replay to see the animation. Which easing feels right?</p>
+
+  <!-- Bad Deal -->
+  <div class="gauge-card" onclick="selectCard(this); replayGauge('bad')" data-choice="bad">
+    <svg class="gauge-svg" width="200" height="115" viewBox="0 0 200 115">
+      <path d="M 20 95 A 80 80 0 0 1 66.7 25.7" stroke="#fca5a5" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 72 23.5 A 80 80 0 0 1 128 23.5" stroke="#fde68a" stroke-width="12" fill="none"/>
+      <path d="M 133.3 25.7 A 80 80 0 0 1 180 95" stroke="#86efac" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 20 95 A 80 80 0 0 1 66.7 25.7" stroke="#ef4444" stroke-width="12" fill="none" stroke-linecap="round" opacity="0.85"/>
+      <g id="needle-bad" class="needle" style="transform: rotate(-90deg)">
+        <line x1="100" y1="95" x2="38" y2="65" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <circle cx="100" cy="95" r="6" fill="#1a1a1a"/>
+      <circle cx="100" cy="95" r="3" fill="#fff"/>
+    </svg>
+    <div class="tier-labels"><span>Bad</span><span>Fair</span><span>Good</span></div>
+    <div class="deal-label" style="color: #dc2626;">Bad Deal</div>
+    <div class="deal-sub">$120,000 over market value</div>
+    <button class="replay-btn" onclick="event.stopPropagation(); replayGauge('bad')">↻ Replay</button>
+  </div>
+
+  <!-- Fair Deal -->
+  <div class="gauge-card" onclick="selectCard(this); replayGauge('fair')" data-choice="fair">
+    <svg class="gauge-svg" width="200" height="115" viewBox="0 0 200 115">
+      <path d="M 20 95 A 80 80 0 0 1 66.7 25.7" stroke="#fca5a5" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 72 23.5 A 80 80 0 0 1 128 23.5" stroke="#fde68a" stroke-width="12" fill="none"/>
+      <path d="M 133.3 25.7 A 80 80 0 0 1 180 95" stroke="#86efac" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 72 23.5 A 80 80 0 0 1 128 23.5" stroke="#f59e0b" stroke-width="12" fill="none" opacity="0.85"/>
+      <g id="needle-fair" class="needle" style="transform: rotate(-90deg)">
+        <line x1="100" y1="95" x2="100" y2="15" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <circle cx="100" cy="95" r="6" fill="#1a1a1a"/>
+      <circle cx="100" cy="95" r="3" fill="#fff"/>
+    </svg>
+    <div class="tier-labels"><span>Bad</span><span>Fair</span><span>Good</span></div>
+    <div class="deal-label" style="color: #d97706;">Fair Deal</div>
+    <div class="deal-sub">$15,000 over market value</div>
+    <button class="replay-btn" onclick="event.stopPropagation(); replayGauge('fair')">↻ Replay</button>
+  </div>
+
+  <!-- Good Deal -->
+  <div class="gauge-card" onclick="selectCard(this); replayGauge('good')" data-choice="good">
+    <svg class="gauge-svg" width="200" height="115" viewBox="0 0 200 115">
+      <path d="M 20 95 A 80 80 0 0 1 66.7 25.7" stroke="#fca5a5" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 72 23.5 A 80 80 0 0 1 128 23.5" stroke="#fde68a" stroke-width="12" fill="none"/>
+      <path d="M 133.3 25.7 A 80 80 0 0 1 180 95" stroke="#86efac" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 133.3 25.7 A 80 80 0 0 1 180 95" stroke="#22c55e" stroke-width="12" fill="none" stroke-linecap="round" opacity="0.85"/>
+      <g id="needle-good" class="needle" style="transform: rotate(-90deg)">
+        <line x1="100" y1="95" x2="162" y2="65" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <circle cx="100" cy="95" r="6" fill="#1a1a1a"/>
+      <circle cx="100" cy="95" r="3" fill="#fff"/>
+    </svg>
+    <div class="tier-labels"><span>Bad</span><span>Fair</span><span>Good</span></div>
+    <div class="deal-label" style="color: #16a34a;">Good Deal</div>
+    <div class="deal-sub">$450,000 under market value</div>
+    <button class="replay-btn" onclick="event.stopPropagation(); replayGauge('good')">↻ Replay</button>
+  </div>
+</div>
+
+<script>
+  const angles = {
+    bad: -50,
+    fair: 0,
+    good: 50
+  };
+
+  function replayGauge(id) {
+    const needle = document.getElementById('needle-' + id);
+    needle.classList.remove('animate');
+    needle.style.transform = 'rotate(-90deg)';
+    needle.offsetHeight;
+    requestAnimationFrame(() => {
+      needle.classList.add('animate');
+      needle.style.transform = 'rotate(' + angles[id] + 'deg)';
+    });
+  }
+
+  function selectCard(el) {
+    document.querySelectorAll('.gauge-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  // Auto-play all on load with stagger
+  window.addEventListener('load', () => {
+    setTimeout(() => replayGauge('bad'), 300);
+    setTimeout(() => replayGauge('fair'), 600);
+    setTimeout(() => replayGauge('good'), 900);
+  });
+</script>
+</body>
+</html>

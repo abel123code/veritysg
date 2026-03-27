@@ -18,6 +18,7 @@ import {
 import TransactionTable from "@/components/TransactionTable";
 import RentalSearchForm from "@/components/RentalSearchForm";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
+import DealMeter from "@/components/DealMeter";
 import type { LocationSelection } from "@/components/LocationAutocomplete";
 import { resolveLocation, buildHdbResaleBody, buildHdbRentalBody, buildUraTransactionsBody, buildUraRentalsBody } from "@/lib/resolveLocation";
 import LocationMap from "@/components/LocationMap";
@@ -130,75 +131,6 @@ function normalizePrivate(data: any[]): UnifiedRental[] {
 function formatFlatType(flatType: string): string {
   if (!flatType) return "–";
   return flatType;
-}
-
-/* ── Deal Meter SVG ── */
-function DealMeter({ score }: { score: number }) {
-  // score: 0-100 → Bad(0-25), Fair(25-50), Good(50-75), Great(75-100)
-  const clampedScore = Math.max(0, Math.min(100, score));
-  const startAngle = -135;
-  const endAngle = 135;
-  const range = endAngle - startAngle;
-  const needleAngle = startAngle + (clampedScore / 100) * range;
-  const r = 80;
-  const cx = 100;
-  const cy = 100;
-
-  const arcPath = (from: number, to: number) => {
-    const toRad = (d: number) => (d * Math.PI) / 180;
-    const x1 = cx + r * Math.cos(toRad(from));
-    const y1 = cy + r * Math.sin(toRad(from));
-    const x2 = cx + r * Math.cos(toRad(to));
-    const y2 = cy + r * Math.sin(toRad(to));
-    const large = to - from > 180 ? 1 : 0;
-    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
-  };
-
-  const segWidth = range / 4;
-  const segments = [
-    { color: "hsl(0, 70%, 50%)", from: startAngle, to: startAngle + segWidth },
-    { color: "hsl(40, 80%, 50%)", from: startAngle + segWidth, to: startAngle + segWidth * 2 },
-    { color: "hsl(100, 50%, 45%)", from: startAngle + segWidth * 2, to: startAngle + segWidth * 3 },
-    { color: "hsl(140, 60%, 38%)", from: startAngle + segWidth * 3, to: endAngle },
-  ];
-
-  const labels = ["Bad Deal", "Fair Deal", "Good Deal", "Great Deal"];
-  const activeIdx = clampedScore >= 75 ? 3 : clampedScore >= 50 ? 2 : clampedScore >= 25 ? 1 : 0;
-
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const needleX = cx + (r - 20) * Math.cos(toRad(needleAngle));
-  const needleY = cy + (r - 20) * Math.sin(toRad(needleAngle));
-
-  return (
-    <div className="flex flex-col items-center">
-      <svg viewBox="0 0 200 130" className="w-64 h-auto">
-        {segments.map((seg, i) => (
-          <path
-            key={i}
-            d={arcPath(seg.from, seg.to)}
-            stroke={seg.color}
-            strokeWidth={12}
-            fill="none"
-            strokeLinecap="round"
-            opacity={i === activeIdx ? 1 : 0.25}
-          />
-        ))}
-        <line
-          x1={cx}
-          y1={cy}
-          x2={needleX}
-          y2={needleY}
-          stroke="hsl(var(--foreground))"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-        />
-        <circle cx={cx} cy={cy} r={4} fill="hsl(var(--foreground))" />
-      </svg>
-      <span className="mt-1 text-lg font-bold tracking-tight text-foreground">
-        {labels[activeIdx]}
-      </span>
-    </div>
-  );
 }
 
 /* ── Evaluated transaction types ── */

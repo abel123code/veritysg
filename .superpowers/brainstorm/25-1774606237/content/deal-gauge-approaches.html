@@ -1,0 +1,86 @@
+<h2>Deal Quality Indicator — Design Approaches</h2>
+<p class="subtitle">Which visual style feels right for showing property buyers if they're getting a good deal?</p>
+
+<div class="cards">
+  <!-- Option A: Horizontal Bar Gauge -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 32px 24px; background: #fafafa;">
+      <!-- Horizontal segmented bar -->
+      <div style="text-align: center; font-family: system-ui;">
+        <div style="display: flex; border-radius: 999px; overflow: hidden; height: 12px; margin-bottom: 12px;">
+          <div style="flex: 1; background: #ef4444;"></div>
+          <div style="flex: 1; background: #f59e0b;"></div>
+          <div style="flex: 1; background: #22c55e;"></div>
+        </div>
+        <!-- Pointer triangle -->
+        <div style="position: relative; height: 20px; margin-bottom: 8px;">
+          <div style="position: absolute; left: 80%; transform: translateX(-50%); margin-top: -14px;">
+            <div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 10px solid #111;"></div>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-bottom: 16px;">
+          <span>Bad Deal</span>
+          <span>Fair</span>
+          <span>Good Deal</span>
+        </div>
+        <div style="font-size: 22px; font-weight: 700; color: #16a34a;">Good Deal</div>
+        <div style="font-size: 14px; color: #666; margin-top: 4px;">$450,000 under market value</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Horizontal Bar</h3>
+      <p>Clean segmented bar with a pointer. Simple, compact, modern. Like a credit score indicator. Easy to scan — left is bad, right is good.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Traffic Light / Pill Badge -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 32px 24px; background: #fafafa;">
+      <div style="text-align: center; font-family: system-ui;">
+        <!-- Three pills in a row -->
+        <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;">
+          <div style="padding: 8px 20px; border-radius: 999px; background: #fef2f2; color: #b91c1c; font-size: 13px; font-weight: 500; border: 1.5px solid #fecaca;">Bad</div>
+          <div style="padding: 8px 20px; border-radius: 999px; background: #fffbeb; color: #b45309; font-size: 13px; font-weight: 500; border: 1.5px solid #fde68a;">Fair</div>
+          <div style="padding: 8px 20px; border-radius: 999px; background: #f0fdf4; color: #15803d; font-size: 13px; font-weight: 500; border: 2.5px solid #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.15);">Good</div>
+        </div>
+        <div style="font-size: 22px; font-weight: 700; color: #16a34a;">Good Deal</div>
+        <div style="font-size: 14px; color: #666; margin-top: 4px;">$450,000 under market value</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Pill Badges</h3>
+      <p>Three fixed tiers as pill badges. The active one is highlighted with a ring. Ultra-simple — no gauge mechanics, just "which bucket are you in". Very mobile-friendly.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Semicircle Gauge (Refined) -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 32px 24px; background: #fafafa;">
+      <div style="text-align: center; font-family: system-ui;">
+        <!-- SVG semicircle gauge -->
+        <svg width="200" height="120" viewBox="0 0 200 120" style="margin: 0 auto; display: block;">
+          <!-- Background segments -->
+          <path d="M 20 100 A 80 80 0 0 1 66.7 30.7" stroke="#fee2e2" stroke-width="14" fill="none" stroke-linecap="round"/>
+          <path d="M 70 28.5 A 80 80 0 0 1 130 28.5" stroke="#fef3c7" stroke-width="14" fill="none"/>
+          <path d="M 133.3 30.7 A 80 80 0 0 1 180 100" stroke="#dcfce7" stroke-width="14" fill="none" stroke-linecap="round"/>
+          <!-- Active segment highlight -->
+          <path d="M 133.3 30.7 A 80 80 0 0 1 180 100" stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round" opacity="0.7"/>
+          <!-- Needle -->
+          <line x1="100" y1="100" x2="160" y2="45" stroke="#111" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="100" cy="100" r="5" fill="#111"/>
+        </svg>
+        <div style="display: flex; justify-content: space-between; width: 200px; margin: 4px auto 16px; font-size: 11px; color: #888;">
+          <span>Bad</span>
+          <span>Fair</span>
+          <span>Good</span>
+        </div>
+        <div style="font-size: 22px; font-weight: 700; color: #16a34a;">Good Deal</div>
+        <div style="font-size: 14px; color: #666; margin-top: 4px;">$450,000 under market value</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Refined Semicircle</h3>
+      <p>Keeps the semicircle concept but fixes the issues: thicker colored segments, proper needle positioning aligned to the label, clean segment labels. Familiar "speedometer" metaphor.</p>
+    </div>
+  </div>
+</div>
