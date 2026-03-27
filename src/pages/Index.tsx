@@ -19,7 +19,7 @@ const ROOMS = [
 ];
 
 interface RoomMeta { image_url?: string; mobile_image_url?: string; title?: string; tactics_label?: string; }
-interface HeroSettings { background_image?: string; background_video?: string; }
+interface HeroSettings { background_image?: string; background_video?: string; display_mode?: "video" | "image" | "none"; }
 
 export default function Index() {
   const [hotspots, setHotspots] = useState<Record<string, Hotspot[]>>({});
@@ -98,6 +98,7 @@ export default function Index() {
       <HeroGreeting
         backgroundImage={heroSettings.background_image}
         backgroundVideo={heroSettings.background_video}
+        displayMode={heroSettings.display_mode}
       />
       {ROOMS.map((room) => {
         const meta = roomMeta[room.key];

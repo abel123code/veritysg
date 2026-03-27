@@ -251,7 +251,7 @@ export default function Admin() {
   const [regulations, setRegulations] = useState<GuideRegulation[]>([]);
   const [glossary, setGlossary] = useState<GuideGlossary[]>([]);
   const [guideLoading, setGuideLoading] = useState(false);
-  const [heroSettings, setHeroSettings] = useState<{ background_image?: string; background_video?: string }>({});
+  const [heroSettings, setHeroSettings] = useState<{ background_image?: string; background_video?: string; display_mode?: "video" | "image" | "none" }>({});
   const [heroSaving, setHeroSaving] = useState(false);
   const canvasRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const { toast } = useToast();
@@ -550,6 +550,23 @@ export default function Admin() {
                 <CardDescription>Configure the hero greeting section background image or looping video.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Display Mode</Label>
+                  <Select
+                    value={heroSettings.display_mode || "video"}
+                    onValueChange={(v) => setHeroSettings((prev) => ({ ...prev, display_mode: v as "video" | "image" | "none" }))}
+                  >
+                    <SelectTrigger className="w-full md:w-64">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="video">Video background</SelectItem>
+                      <SelectItem value="image">Image background</SelectItem>
+                      <SelectItem value="none">Solid color (no media)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Choose which media to show on the hero section. Upload both below, then pick which one is active.</p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium flex items-center gap-2">
@@ -634,7 +651,7 @@ export default function Admin() {
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Video takes priority over image if both are set. Leave both empty for solid background color.</p>
+                <p className="text-xs text-muted-foreground">Upload your media above, then use the Display Mode dropdown to choose which one is shown.</p>
                 <Button onClick={saveHeroSettings} disabled={heroSaving}>
                   <Save className="h-4 w-4 mr-2" /> {heroSaving ? "Saving..." : "Save Hero Settings"}
                 </Button>

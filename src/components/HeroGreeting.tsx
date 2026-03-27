@@ -16,18 +16,21 @@ const greetings = [
 interface HeroGreetingProps {
   backgroundImage?: string;
   backgroundVideo?: string;
+  displayMode?: "video" | "image" | "none";
 }
 
-export default function HeroGreeting({ backgroundImage, backgroundVideo }: HeroGreetingProps) {
+export default function HeroGreeting({ backgroundImage, backgroundVideo, displayMode = "video" }: HeroGreetingProps) {
   const scrollDown = () => {
     window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
   };
 
-  const hasMedia = backgroundImage || backgroundVideo;
+  const showVideo = displayMode === "video" && backgroundVideo;
+  const showImage = displayMode === "image" && backgroundImage;
+  const hasMedia = showVideo || showImage;
 
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center bg-primary text-primary-foreground overflow-hidden">
-      {backgroundVideo && (
+      {showVideo && (
         <video
           autoPlay
           loop
@@ -38,7 +41,7 @@ export default function HeroGreeting({ backgroundImage, backgroundVideo }: HeroG
           <source src={backgroundVideo} type="video/mp4" />
         </video>
       )}
-      {backgroundImage && !backgroundVideo && (
+      {showImage && (
         <img
           src={backgroundImage}
           alt=""

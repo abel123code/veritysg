@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/65837/Desktop/veritysg/supabase -name *.sql -o -name *.md)"
+    ]
+  }
+}
