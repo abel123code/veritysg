@@ -175,7 +175,7 @@ export default function LocationAutocomplete({
       </div>
 
       {showDropdown && suggestions.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg overflow-hidden">
+        <div className="absolute z-[1100] mt-1 w-full rounded-md border border-border bg-popover shadow-lg overflow-hidden">
           {suggestions.map((result, idx) => (
             <button
               key={`${result.POSTAL}-${idx}`}
