@@ -245,6 +245,10 @@ function FairBuysSection() {
   const [error, setError] = useState<string | null>(null);
   const [hasEvaluated, setHasEvaluated] = useState(false);
 
+  // Pagination & filter
+  const [evalPage, setEvalPage] = useState(1);
+  const [evalFilter, setEvalFilter] = useState("");
+
   // Placeholder deal score
   const [dealScore, setDealScore] = useState(50);
   const [priceDiff, setPriceDiff] = useState(0);
@@ -266,6 +270,8 @@ function FairBuysSection() {
     setShowMissingPrompt(false);
     setDealScore(50);
     setPriceDiff(0);
+    setEvalPage(1);
+    setEvalFilter("");
   };
 
   const runEvaluation = async () => {
@@ -274,6 +280,8 @@ function FairBuysSection() {
     setError(null);
     setHasEvaluated(true);
     setShowMissingPrompt(false);
+    setEvalPage(1);
+    setEvalFilter("");
 
     try {
       const sel = buySelectionRef.current;
@@ -323,8 +331,18 @@ function FairBuysSection() {
         }
       }
 
-      // Sort by date
+      // Sort by relevance: sqft proximity to user input first, then date
+      const targetSqft = parseFloat(sqft) || 0;
+
       merged.sort((a, b) => {
+        if (targetSqft > 0) {
+          const sqftA = parseFloat(a.type === "HDB" ? a.sqft : a.sqft) || 0;
+          const sqftB = parseFloat(b.type === "HDB" ? b.sqft : b.sqft) || 0;
+          const distA = Math.abs(sqftA - targetSqft);
+          const distB = Math.abs(sqftB - targetSqft);
+          if (distA !== distB) return distA - distB;
+        }
+
         const dateA = a.type === "HDB" ? a.date : a.contractDate;
         const dateB = b.type === "HDB" ? b.date : b.contractDate;
         return dateB.localeCompare(dateA);
@@ -379,7 +397,7 @@ function FairBuysSection() {
       </div>
 
       {/* ── Input Form ── */}
-      <div className="rounded-xl border border-border bg-card p-6 space-y-5">
+      <div className="rounded-xl border border-border bg-card p-6 space-y-5 overflow-visible">
         {/* Housing Type Toggle */}
         <div>
           <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -406,7 +424,7 @@ function FairBuysSection() {
         </div>
 
         {/* Grid: sqft, bedrooms, price */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-end">
           <div>
             <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
               No. of Square Feet
@@ -523,14 +541,36 @@ function FairBuysSection() {
       )}
 
       {/* ── Nearby Transactions Table ── */}
-      {!isLoading && hasEvaluated && transactions.length > 0 && (
+      {!isLoading && hasEvaluated && transactions.length > 0 && (() => {
+        const q = evalFilter.toLowerCase();
+        const filtered = q
+          ? transactions.filter((t) => {
+              if (t.type === "HDB") {
+                return t.location.toLowerCase().includes(q) || t.sqft.toLowerCase().includes(q) || t.bedrooms.toLowerCase().includes(q) || String(t.resalePrice).includes(q) || t.date.includes(q);
+              }
+              return t.projectStreet.toLowerCase().includes(q) || t.sqft.toLowerCase().includes(q) || String(t.price).includes(q) || t.contractDate.includes(q) || t.tenure.toLowerCase().includes(q);
+            })
+          : transactions;
+        const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+        const paged = filtered.slice((evalPage - 1) * PAGE_SIZE, evalPage * PAGE_SIZE);
+        return (
         <div className="space-y-3">
           <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Nearby Transactions
           </h4>
-          <p className="text-xs text-muted-foreground">
-            {transactions.length} transaction{transactions.length !== 1 ? "s" : ""} found
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              {filtered.length === transactions.length
+                ? `${transactions.length} transaction${transactions.length !== 1 ? "s" : ""} found`
+                : `${filtered.length} of ${transactions.length} transactions match filter`}
+            </p>
+            <Input
+              placeholder="Filter results…"
+              value={evalFilter}
+              onChange={(e) => { setEvalFilter(e.target.value); setEvalPage(1); }}
+              className="w-48 h-8 text-xs"
+            />
+          </div>
           <div className="rounded-xl border border-border overflow-hidden">
             {transactions[0]?.type === "HDB" ? (
               <Table>
@@ -546,7 +586,7 @@ function FairBuysSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(transactions as HdbTransaction[]).map((t, i) => (
+                  {(paged as HdbTransaction[]).map((t, i) => (
                     <TableRow key={i}>
                       <TableCell>
                         <Badge variant="secondary" className="bg-muted text-muted-foreground">HDB</Badge>
@@ -575,7 +615,7 @@ function FairBuysSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(transactions as CondoTransaction[]).map((t, i) => (
+                  {(paged as CondoTransaction[]).map((t, i) => (
                     <TableRow key={i}>
                       <TableCell>
                         <Badge variant="default" className="bg-foreground text-background">Condo</Badge>
@@ -592,6 +632,7 @@ function FairBuysSection() {
               </Table>
             )}
           </div>
+          <TablePagination page={evalPage} totalPages={totalPages} total={filtered.length} onPageChange={setEvalPage} />
           <p className="text-xs text-muted-foreground">
             {transactions[0]?.type === "HDB"
               ? "Data from HDB resale transactions. Source: data.gov.sg"
@@ -599,7 +640,8 @@ function FairBuysSection() {
             }
           </p>
         </div>
-      )}
+        );
+      })()}
 
       {!isLoading && hasEvaluated && !error && transactions.length === 0 && (
         <p className="text-sm text-muted-foreground">No nearby transactions found for "{location}".</p>
@@ -651,6 +693,10 @@ function FairRentsSection() {
   const [dealScore, setDealScore] = useState(50);
   const [priceDiff, setPriceDiff] = useState(0);
 
+  // Pagination & filter
+  const [rentalEvalPage, setRentalEvalPage] = useState(1);
+  const [rentalEvalFilter, setRentalEvalFilter] = useState("");
+
   // Missing fields prompt
   const [showMissingPrompt, setShowMissingPrompt] = useState(false);
 
@@ -668,6 +714,8 @@ function FairRentsSection() {
     setShowMissingPrompt(false);
     setDealScore(50);
     setPriceDiff(0);
+    setRentalEvalPage(1);
+    setRentalEvalFilter("");
   };
 
   const runEvaluation = async () => {
@@ -676,6 +724,8 @@ function FairRentsSection() {
     setError(null);
     setHasEvaluated(true);
     setShowMissingPrompt(false);
+    setRentalEvalPage(1);
+    setRentalEvalFilter("");
 
     try {
       const sel = rentSelectionRef.current;
@@ -719,8 +769,20 @@ function FairRentsSection() {
         }
       }
 
-      // Sort by date descending
+      // Sort by relevance: sqft proximity to user input first, then date
+      const targetSqft = parseFloat(sqft) || 0;
+
       merged.sort((a, b) => {
+        if (targetSqft > 0) {
+          const sqftA = a.type === "Condo" ? (parseFloat(a.areaSqft) || 0) : 0;
+          const sqftB = b.type === "Condo" ? (parseFloat(b.areaSqft) || 0) : 0;
+          if (sqftA > 0 && sqftB > 0) {
+            const distA = Math.abs(sqftA - targetSqft);
+            const distB = Math.abs(sqftB - targetSqft);
+            if (distA !== distB) return distA - distB;
+          }
+        }
+
         const dateA = a.type === "HDB" ? a.rentApprovalDate : a.leaseDate;
         const dateB = b.type === "HDB" ? b.rentApprovalDate : b.leaseDate;
         return dateB.localeCompare(dateA);
@@ -775,7 +837,7 @@ function FairRentsSection() {
       </div>
 
       {/* ── Input Form ── */}
-      <div className="rounded-xl border border-border bg-card p-6 space-y-5">
+      <div className="rounded-xl border border-border bg-card p-6 space-y-5 overflow-visible">
         {/* Housing Type Toggle */}
         <div>
           <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -802,7 +864,7 @@ function FairRentsSection() {
         </div>
 
         {/* Grid: sqft, bedrooms, rental offering */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-end">
           <div>
             <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted-foreground">
               No. of Square Feet
@@ -919,14 +981,36 @@ function FairRentsSection() {
       )}
 
       {/* ── Nearby Rental Transactions Table ── */}
-      {!isLoading && hasEvaluated && transactions.length > 0 && (
+      {!isLoading && hasEvaluated && transactions.length > 0 && (() => {
+        const q = rentalEvalFilter.toLowerCase();
+        const filtered = q
+          ? transactions.filter((t) => {
+              if (t.type === "HDB") {
+                return t.location.toLowerCase().includes(q) || t.bedrooms.toLowerCase().includes(q) || String(t.monthlyRental).includes(q) || t.rentApprovalDate.includes(q);
+              }
+              return t.projectStreet.toLowerCase().includes(q) || t.areaSqft.toLowerCase().includes(q) || String(t.monthlyRental).includes(q) || t.bedrooms.toLowerCase().includes(q) || t.leaseDate.includes(q);
+            })
+          : transactions;
+        const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+        const paged = filtered.slice((rentalEvalPage - 1) * PAGE_SIZE, rentalEvalPage * PAGE_SIZE);
+        return (
         <div className="space-y-3">
           <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Nearby Rental Transactions
           </h4>
-          <p className="text-xs text-muted-foreground">
-            {transactions.length} rental transaction{transactions.length !== 1 ? "s" : ""} found
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              {filtered.length === transactions.length
+                ? `${transactions.length} rental transaction${transactions.length !== 1 ? "s" : ""} found`
+                : `${filtered.length} of ${transactions.length} transactions match filter`}
+            </p>
+            <Input
+              placeholder="Filter results…"
+              value={rentalEvalFilter}
+              onChange={(e) => { setRentalEvalFilter(e.target.value); setRentalEvalPage(1); }}
+              className="w-48 h-8 text-xs"
+            />
+          </div>
           <div className="rounded-xl border border-border overflow-hidden">
             {transactions[0]?.type === "HDB" ? (
               <Table>
@@ -940,7 +1024,7 @@ function FairRentsSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(transactions as HdbRentalTransaction[]).map((t, i) => (
+                  {(paged as HdbRentalTransaction[]).map((t, i) => (
                     <TableRow key={i}>
                       <TableCell>
                         <Badge variant="secondary" className="bg-muted text-muted-foreground">HDB</Badge>
@@ -966,7 +1050,7 @@ function FairRentsSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(transactions as CondoRentalTransaction[]).map((t, i) => (
+                  {(paged as CondoRentalTransaction[]).map((t, i) => (
                     <TableRow key={i}>
                       <TableCell>
                         <Badge variant="default" className="bg-foreground text-background">Condo</Badge>
@@ -982,6 +1066,7 @@ function FairRentsSection() {
               </Table>
             )}
           </div>
+          <TablePagination page={rentalEvalPage} totalPages={totalPages} total={filtered.length} onPageChange={setRentalEvalPage} />
           <p className="text-xs text-muted-foreground">
             {transactions[0]?.type === "HDB"
               ? "Data from HDB rental transactions. Source: data.gov.sg"
@@ -989,7 +1074,8 @@ function FairRentsSection() {
             }
           </p>
         </div>
-      )}
+        );
+      })()}
 
       {!isLoading && hasEvaluated && !error && transactions.length === 0 && (
         <p className="text-sm text-muted-foreground">No nearby rental transactions found for "{location}".</p>
