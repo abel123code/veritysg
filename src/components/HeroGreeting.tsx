@@ -17,9 +17,10 @@ interface HeroGreetingProps {
   backgroundImage?: string;
   backgroundVideo?: string;
   displayMode?: "video" | "image" | "none";
+  onMediaReady?: () => void;
 }
 
-export default function HeroGreeting({ backgroundImage, backgroundVideo, displayMode = "video" }: HeroGreetingProps) {
+export default function HeroGreeting({ backgroundImage, backgroundVideo, displayMode = "video", onMediaReady }: HeroGreetingProps) {
   const scrollDown = () => {
     window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
   };
@@ -37,6 +38,8 @@ export default function HeroGreeting({ backgroundImage, backgroundVideo, display
           muted
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
+          onCanPlay={() => onMediaReady?.()}
+          onError={() => onMediaReady?.()}
         >
           <source src={backgroundVideo} type="video/mp4" />
         </video>
@@ -46,6 +49,8 @@ export default function HeroGreeting({ backgroundImage, backgroundVideo, display
           src={backgroundImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
+          onLoad={() => onMediaReady?.()}
+          onError={() => onMediaReady?.()}
         />
       )}
       {hasMedia && <div className="absolute inset-0 bg-black/40" />}

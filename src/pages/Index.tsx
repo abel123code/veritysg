@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import HeroGreeting from "@/components/HeroGreeting";
 import RoomExperience, { type Hotspot } from "@/components/RoomExperience";
+import LoadingScreen from "@/components/LoadingScreen";
 import { supabase } from "@/integrations/supabase/client";
 import roomViewing from "@/assets/room-viewing.jpg";
 import roomNegotiation from "@/assets/room-negotiation.jpg";
@@ -26,8 +28,36 @@ export default function Index() {
   const [roomMeta, setRoomMeta] = useState<Record<string, RoomMeta>>({});
   const [heroSettings, setHeroSettings] = useState<HeroSettings>({});
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [heroMediaReady, setHeroMediaReady] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  const showLoader = !dataLoaded || !heroMediaReady || !minTimeElapsed;
+
+  // Minimum display time so the loader doesn't flash away on fast connections
+  useEffect(() => {
+    const timer = setTimeout(() => setMinTimeElapsed(true), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // If hero has no media after data loads, mark media as ready immediately
+  useEffect(() => {
+    if (dataLoaded) {
+      const hasMedia =
+        (heroSettings.display_mode === "video" && heroSettings.background_video) ||
+        (heroSettings.display_mode === "image" && heroSettings.background_image);
+      if (!hasMedia) {
+        setHeroMediaReady(true);
+      }
+    }
+  }, [dataLoaded, heroSettings]);
 
   useEffect(() => {
+    // Safety timeout: never block user for more than 5s
+    const safetyTimer = setTimeout(() => {
+      setDataLoaded(true);
+      setHeroMediaReady(true);
+    }, 5000);
+
     const loadData = async () => {
       // Fetch all data in parallel
       const [hotspotsRes, roomImagesRes, settingsRes] = await Promise.all([
@@ -74,6 +104,7 @@ export default function Index() {
     };
 
     loadData();
+    return () => clearTimeout(safetyTimer);
   }, []);
 
   // Compute final image URLs - prioritize CMS images, fallback to static assets
@@ -95,10 +126,14 @@ export default function Index() {
 
   return (
     <main>
+      <AnimatePresence>
+        {showLoader && <LoadingScreen />}
+      </AnimatePresence>
       <HeroGreeting
         backgroundImage={heroSettings.background_image}
         backgroundVideo={heroSettings.background_video}
         displayMode={heroSettings.display_mode}
+        onMediaReady={() => setHeroMediaReady(true)}
       />
       {ROOMS.map((room) => {
         const meta = roomMeta[room.key];
