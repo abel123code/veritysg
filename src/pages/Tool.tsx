@@ -25,6 +25,70 @@ import LocationMap from "@/components/LocationMap";
 import type { UraTransaction } from "@/data/mockData";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, Loader2, AlertCircle, RotateCcw } from "lucide-react";
+import {
+  Pagination, PaginationContent, PaginationItem, PaginationLink,
+  PaginationNext, PaginationPrevious, PaginationEllipsis,
+} from "@/components/ui/pagination";
+
+const PAGE_SIZE = 10;
+
+function getPageNumbers(current: number, total: number): (number | "ellipsis")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | "ellipsis")[] = [1];
+  if (current > 3) pages.push("ellipsis");
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (current < total - 2) pages.push("ellipsis");
+  pages.push(total);
+  return pages;
+}
+
+function TablePagination({ page, totalPages, total, onPageChange }: {
+  page: number; totalPages: number; total: number; onPageChange: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  const from = (page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(page * PAGE_SIZE, total);
+  return (
+    <div className="mt-4 flex flex-col items-center gap-2">
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              onClick={(e) => { e.preventDefault(); if (page > 1) onPageChange(page - 1); }}
+              className={page <= 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
+            />
+          </PaginationItem>
+          {getPageNumbers(page, totalPages).map((p, i) =>
+            p === "ellipsis" ? (
+              <PaginationItem key={`e${i}`}><PaginationEllipsis /></PaginationItem>
+            ) : (
+              <PaginationItem key={p}>
+                <PaginationLink
+                  isActive={p === page}
+                  onClick={(e) => { e.preventDefault(); onPageChange(p); }}
+                  className="cursor-pointer"
+                >
+                  {p}
+                </PaginationLink>
+              </PaginationItem>
+            ),
+          )}
+          <PaginationItem>
+            <PaginationNext
+              onClick={(e) => { e.preventDefault(); if (page < totalPages) onPageChange(page + 1); }}
+              className={page >= totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+      <p className="text-xs text-muted-foreground">
+        Showing {from}–{to} of {total}
+      </p>
+    </div>
+  );
+}
 
 /* ── Shared settings hook ── */
 interface ToolSettings {
@@ -80,11 +144,13 @@ const fmt = (n: number) =>
 
 /* ── Unified rental result ── */
 interface UnifiedRental {
+  source: "HDB" | "Private";
   date: string;
   address: string;
   rent: number;
   rooms: string;
   areaSqft: string;
+  propertyType: string;
 }
 
 const HDB_TOWNS = [
@@ -109,21 +175,25 @@ function classifySearch(query: string): SearchType {
 
 function normalizeHdb(data: any[]): UnifiedRental[] {
   return data.map((r) => ({
+    source: "HDB",
     date: r.date || "",
     address: r.project || "",
     rent: Number(r.rent) || 0,
     rooms: r.unitType || "",
     areaSqft: "–",
+    propertyType: r.unitType || "",
   }));
 }
 
 function normalizePrivate(data: any[]): UnifiedRental[] {
   return data.map((r) => ({
+    source: "Private",
     date: r.leaseDate || "",
     address: [r.project, r.street].filter(Boolean).join(", "),
     rent: Number(r.rent) || 0,
     rooms: r.noOfBedRoom || "",
     areaSqft: r.areaSqft && Number(r.areaSqft) > 0 ? String(r.areaSqft) : "–",
+    propertyType: r.propertyType || "",
   }));
 }
 
@@ -939,6 +1009,8 @@ function JustLookingSection() {
   const [errors, setErrors] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchLabel, setSearchLabel] = useState("");
+  const [rentalPage, setRentalPage] = useState(1);
+  const [buyPage, setBuyPage] = useState(1);
 
   const doRentalSearch = async (location: string, lat?: number, lng?: number) => {
     setIsLoading(true);
@@ -976,6 +1048,7 @@ function JustLookingSection() {
     await Promise.allSettled(promises);
     merged.sort((a, b) => b.date.localeCompare(a.date));
     setRentalResults(merged);
+    setRentalPage(1);
     setErrors(errs);
     setIsLoading(false);
   };
@@ -1014,6 +1087,7 @@ function JustLookingSection() {
       (a, b) => b.contractDate.localeCompare(a.contractDate),
     );
     setBuyResults(merged);
+    setBuyPage(1);
     setErrors(errs);
     setIsLoading(false);
   };
@@ -1088,48 +1162,73 @@ function JustLookingSection() {
       ))}
 
       {/* Rental results table */}
-      {!isLoading && mode === "renting" && rentalResults.length > 0 && (
-        <div>
-          <p className="mb-2 text-xs text-muted-foreground">
-            {rentalResults.length} rental transaction{rentalResults.length !== 1 ? "s" : ""} found
-          </p>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead className="text-right">Rental Price</TableHead>
-                <TableHead>No. of Rooms</TableHead>
-                <TableHead className="text-right">Area (sqft)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rentalResults.map((r, i) => (
-                <TableRow key={i}>
-                  <TableCell>{r.date}</TableCell>
-                  <TableCell className="font-medium">{r.address}</TableCell>
-                  <TableCell className="text-right">{fmt(r.rent)}</TableCell>
-                  <TableCell>{r.rooms}</TableCell>
-                  <TableCell className="text-right">{r.areaSqft}</TableCell>
+      {!isLoading && mode === "renting" && rentalResults.length > 0 && (() => {
+        const totalPages = Math.ceil(rentalResults.length / PAGE_SIZE);
+        const paged = rentalResults.slice((rentalPage - 1) * PAGE_SIZE, rentalPage * PAGE_SIZE);
+        return (
+          <div>
+            <p className="mb-2 text-xs text-muted-foreground">
+              {rentalResults.length} rental transaction{rentalResults.length !== 1 ? "s" : ""} found
+            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Area (sqft)</TableHead>
+                  <TableHead>No. of Rooms</TableHead>
+                  <TableHead className="text-right">Rental Price</TableHead>
+                  <TableHead>Date</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Data from HDB (data.gov.sg) and URA rental contracts (past 12 months).
-          </p>
-        </div>
-      )}
+              </TableHeader>
+              <TableBody>
+                {paged.map((r, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Badge
+                        variant={r.source === "HDB" ? "secondary" : "default"}
+                        className={
+                          r.source === "HDB"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
+                        }
+                      >
+                        {r.source}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">{r.address}</TableCell>
+                    <TableCell>{r.propertyType}</TableCell>
+                    <TableCell className="text-right">{r.areaSqft}</TableCell>
+                    <TableCell>{r.rooms}</TableCell>
+                    <TableCell className="text-right">{fmt(r.rent)}</TableCell>
+                    <TableCell>{r.date}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination page={rentalPage} totalPages={totalPages} total={rentalResults.length} onPageChange={setRentalPage} />
+            <p className="mt-2 text-xs text-muted-foreground text-center">
+              Data from HDB (data.gov.sg) and URA rental contracts (past 12 months).
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Buy results table */}
-      {!isLoading && mode === "buying" && buyResults.length > 0 && (
-        <div>
-          <p className="mb-2 text-xs text-muted-foreground">
-            {buyResults.length} transaction{buyResults.length !== 1 ? "s" : ""} found
-          </p>
-          <TransactionTable data={buyResults} />
-        </div>
-      )}
+      {!isLoading && mode === "buying" && buyResults.length > 0 && (() => {
+        const totalPages = Math.ceil(buyResults.length / PAGE_SIZE);
+        const paged = buyResults.slice((buyPage - 1) * PAGE_SIZE, buyPage * PAGE_SIZE);
+        return (
+          <div>
+            <p className="mb-2 text-xs text-muted-foreground">
+              {buyResults.length} transaction{buyResults.length !== 1 ? "s" : ""} found
+            </p>
+            <TransactionTable data={paged} />
+            <TablePagination page={buyPage} totalPages={totalPages} total={buyResults.length} onPageChange={setBuyPage} />
+          </div>
+        );
+      })()}
 
       {!isLoading && hasSearched && errors.length === 0 &&
         ((mode === "renting" && rentalResults.length === 0) || (mode === "buying" && buyResults.length === 0)) && (
